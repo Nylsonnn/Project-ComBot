@@ -1,4 +1,4 @@
-# Your Pokemon Utility Bot
+# Combee Bot (ComBot)
 
 ## About:
 
