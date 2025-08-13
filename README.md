@@ -2,7 +2,7 @@
 
 ## About:
 
-A Pokemon bot to keep track of stats from Showdown, update those stats into Google Sheets and give sets from Smogon.
+This is a modified version of Clodbot for personal use of SGFM.
 
 ## Bot Usage:
 
