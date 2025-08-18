@@ -87,7 +87,7 @@ def get_loser(json_data: Dict[str, List[str]]) -> str:
 
 
 def get_difference(
-    players: Dict[str, str], winner: str, revives: List[Tuple[str, str]]
+    players: Dict[str, str], winner: str, revives: List[Tuple[str, str]], stats: Dict[str, Dict[str, Dict[str,int]]], all_pokemon: Dict[str, Dict[str, str]]
 ) -> str:
     # Retrieves the point difference from winning player to losing player.
     p1_deaths = sum(pokemon["deaths"] for pokemon in stats["p1"].values())
@@ -100,11 +100,15 @@ def get_difference(
                 else:
                     p2_deaths -= 1
                 break
+
+    p1_brought = len(all_pokemon.get("p1", {}))
+    p2_brought = len(all_pokemon.get("p2", {}))
+
+
     if winner == players["p1"]:
-        difference = f"({p2_deaths - p1_deaths}-0)"
+        alive = max(0, p1_brought - p1_deaths)
     else:
-        difference = f"({p1_deaths - p2_deaths}-0)"
-    return difference
+        alive = max(0, p2_brought - p2_deaths)
 
 
 def initialize_stats(pokemon_data: Dict[str, Dict[str, str]]) -> None:
