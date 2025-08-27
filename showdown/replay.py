@@ -8,6 +8,17 @@ from typing import Dict, List, Tuple
 
 stats = {}
 
+def _opponent(pid: str) -> str:
+    return "p2" if pid == "p1" else "p1"
+
+def _add_kill_by_nickname(stats: Dict[str, Dict[str, Dict[str, int]]], player: str, nickname: str) -> None:
+    if not nickname:
+        return
+    for _, data in stats.get(player, {}).items():
+        if data["nickname"] == nickname:
+            data["kills"] += 1
+            return
+
 
 def get_replay_players(json_data: Dict[str, List[str]]) -> Dict[str, str]:
     # Retrieves player names.
@@ -164,25 +175,60 @@ def process_sandstorm(
     fainted_player: str,
     actions: List[str], 
     stats: Dict[str, Dict[str, Dict[str, int]]]):
-    # Processes kills from sandstorm.
-    
-    sandstorm_starter = None
-    sandstorm_player = None
-    for action in actions:
-        sandstorm_match = re.search(
-            r"\|-weather\|Sandstorm\|\[from\] ability: ([^\|]+)\|\[of\] (p\d)a: ([^\|]+)",
-            action,
-        )
-        if sandstorm_match:
-            _, sandstorm_player, sandstorm_pokemon = sandstorm_match.groups()
-            sandstorm_starter = sandstorm_pokemon.strip()
+    ### Processes kills from sandstorm.
+
+    #Finds opponent's currently active pokemon
+    opp = _opponent(fainted_player)
+    #Can reverse this action to make sure the first match is always the correct/active pokemon
+    opp_active = None
+    active_pat = re.compile(rf"\|switch|drag|replace)\|{opp}a: ([^|]+)\|")
+    for line in actions:
+        m = active_pat.search(line)
+        if m:
+            opp_active = m.group(2).strip()
+            break
+    #Check if the sandstorm was set by an ability (1)
+    ab_pat = re.compile(
+        r"\|\-weather\|Sandstorm\|\[from\] ability: [^\|]+\|\[of\] (p\d)a: ([^\|]+)"
+    )
+    ability_player = None
+    ability_setter = None
+
+    for line in actions:
+        m = ab_pat.search(line)
+        if m:
+            ability_player, ability_setter = m.group(1), m.group(2).strip()
             break
 
-    if sandstorm_starter:
-        for pokemon, data in stats[sandstorm_player].items():
-            if data["nickname"] == sandstorm_starter:
-                data["kills"] += 1
-                break
+    if ability_setter:
+        if ability_player == fainted_player:
+            #If friendly sand, then kill goes to opponent's active pokemon
+            _add_kill_by_nickname(stats, opp, opp_active)
+        else:
+            #If enemy sand, then kill goes to the ability setter
+            _add_kill_by_nickname(stats, ability_player, ability_setter)
+    else:
+        if opp_active:
+            _add_kill_by_nickname(stats, opp, opp_active)
+
+    
+    #sandstorm_starter = None
+    #sandstorm_player = None
+    #for action in actions:
+    #    sandstorm_match = re.search(
+    #        r"\|-weather\|Sandstorm\|\[from\] ability: ([^\|]+)\|\[of\] (p\d)a: ([^\|]+)",
+    #        action,
+    #    )
+    #    if sandstorm_match:
+    #        _, sandstorm_player, sandstorm_pokemon = sandstorm_match.groups()
+    #        sandstorm_starter = sandstorm_pokemon.strip()
+    #        break
+
+    #if sandstorm_starter:
+    #    for pokemon, data in stats[sandstorm_player].items():
+    #        if data["nickname"] == sandstorm_starter:
+    #            data["kills"] += 1
+    #            break
 
 
 def process_poison(
